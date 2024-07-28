@@ -4,9 +4,10 @@ import (
 	"fmt"
 	sendgrid "github.com/sendgrid/sendgrid-go"
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
+	"os"
 )
 
-const sendgridAPIKey = "<Token>"
+const sendgridAPIKey = os.Getenv("SENDGRID_API_KEY")
 
 func SendVerificationEmail(email, token string) error {
 	//from := mail.NewEmail("AssetCurve", "8info@assetcurve.io")
