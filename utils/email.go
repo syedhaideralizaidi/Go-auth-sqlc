@@ -6,7 +6,7 @@ import (
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
 )
 
-const sendgridAPIKey = "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"
+const sendgridAPIKey = "<Token>"
 
 func SendVerificationEmail(email, token string) error {
 	//from := mail.NewEmail("AssetCurve", "8info@assetcurve.io")
