@@ -14,7 +14,13 @@ func main() {
 	r := gin.Default()
 
 	r.POST("/users", controller.CreateUser)
-	r.POST("/users/:id", controller.GetUser)
+	r.GET("/users/:id", controller.GetUser)
+	r.PUT("/users/:id", controller.UpdateUser)
+	r.DELETE("/users/:id", controller.DeleteUser)
+	r.GET("/users", controller.ListUsers)
 
-	r.Run(":8080") // listen and serve on 0.0.0.0:8080
+	err := r.Run(":8080")
+	if err != nil {
+		panic(err)
+	}
 }
