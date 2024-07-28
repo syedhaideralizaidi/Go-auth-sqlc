@@ -18,4 +18,7 @@ migrate_down:
 sqlc:
 	sqlc generate
 
-.PHONY: postgres created_db drop_db migrate_up migrate_down sqlc
+access_db:
+	docker exec -it postgres_auth psql -U root -d simple_auth
+
+.PHONY: postgres created_db drop_db migrate_up migrate_down sqlc access_db

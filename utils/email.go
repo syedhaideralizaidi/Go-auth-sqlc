@@ -2,22 +2,29 @@ package utils
 
 import (
 	"fmt"
-	sendgrid "github.com/sendgrid/sendgrid-go"
-	"github.com/sendgrid/sendgrid-go/helpers/mail"
+	"net/smtp"
 	"os"
 )
 
-var sendgridAPIKey = os.Getenv("SENDGRID_API_KEY")
+var (
+	smtpHost     = "smtp.gmail.com"
+	smtpPort     = "587"
+	smtpUser     = os.Getenv("SMTP_USER")
+	smtpPassword = os.Getenv("SMTP_PASSWORD")
+)
 
 func SendVerificationEmail(email, token string) error {
-	from := mail.NewEmail("test", "test@me.io")
+	from := smtpUser
+	to := email
 	subject := "Email Verification"
-	to := mail.NewEmail("", email)
-	plainTextContent := fmt.Sprintf("Please verify your email using this token: %s", token)
+	//plainTextContent := fmt.Sprintf("Please verify your email using this token: %s", token)
 	htmlContent := fmt.Sprintf("<p>Please verify your email using this token: <strong>%s</strong></p>", token)
-	message := mail.NewSingleEmail(from, subject, to, plainTextContent, htmlContent)
 
-	client := sendgrid.NewSendClient(sendgridAPIKey)
-	_, err := client.Send(message)
+	// Create the email message
+	message := []byte(fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nContent-Type: text/html; charset=\"UTF-8\"\r\n\r\n%s", from, to, subject, htmlContent))
+
+	// Connect to the SMTP server
+	auth := smtp.PlainAuth("", smtpUser, smtpPassword, smtpHost)
+	err := smtp.SendMail(smtpHost+":"+smtpPort, auth, from, []string{to}, message)
 	return err
 }

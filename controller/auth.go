@@ -2,23 +2,47 @@ package controller
 
 import (
 	"context"
+	"github.com/jackc/pgx/v5/pgtype"
+	db "go-auth-sqlc/database/sqlc"
+	"golang.org/x/crypto/bcrypt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"go-auth-sqlc/database"         // Ensure correct import path
-	db "go-auth-sqlc/database/sqlc" // Ensure correct import path
+	"go-auth-sqlc/database" // Ensure correct import path
 	"go-auth-sqlc/utils"
 )
 
+type RegisterRequest struct {
+	Email       string `json:"email" binding:"required,email"`
+	Username    string `json:"username" binding:"required"`
+	PhoneNumber string `json:"phone_number"`
+	Password    string `json:"password" binding:"required"`
+	Role        string `json:"role" binding:"required,oneof=admin seller buyer"`
+}
+
 func Register(c *gin.Context) {
-	var req db.CreateUserParams
+	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	req.IsVerified.Bool = false
-	user, err := database.Queries.CreateUser(context.Background(), req)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+		return
+	}
+
+	createUserParams := db.CreateUserParams{
+		Email:       req.Email,
+		Username:    req.Username,
+		PhoneNumber: pgtype.Text{String: req.PhoneNumber, Valid: req.PhoneNumber != ""},
+		Password:    string(hashedPassword),
+		Role:        req.Role,
+		IsVerified:  pgtype.Bool{Bool: false, Valid: true},
+	}
+
+	user, err := database.Queries.CreateUser(context.Background(), createUserParams)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -41,8 +65,8 @@ func Register(c *gin.Context) {
 
 func Login(c *gin.Context) {
 	var req struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email    string `json:"email" binding:"required,email"`
+		Password string `json:"password" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -51,14 +75,20 @@ func Login(c *gin.Context) {
 
 	user, err := database.Queries.GetUserByEmail(context.Background(), req.Email)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Incorrect email or password"})
 		return
 	}
 
-	if user.Password != req.Password {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Incorrect password"})
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Incorrect email or password"})
 		return
 	}
+
+	//if user.Password != req.Password {
+	//	c.JSON(http.StatusUnauthorized, gin.H{"error": "Incorrect email or password"})
+	//	return
+	//}
 
 	if !user.IsVerified.Bool {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Email not verified"})
