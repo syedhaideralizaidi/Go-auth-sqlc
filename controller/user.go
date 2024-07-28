@@ -37,7 +37,7 @@ func GetUser(c *gin.Context) {
 	}
 
 	// Fetch the user from the database
-	user, err := database.Queries.GetUser(context.Background(), id)
+	user, err := database.Queries.GetUser(context.Background(), int32(id))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
@@ -78,7 +78,7 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 
-	err = database.Queries.DeleteUser(context.Background(), id)
+	err = database.Queries.DeleteUser(context.Background(), int32(id))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})

@@ -5,17 +5,18 @@
 package db
 
 import (
-	"time"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type User struct {
-	ID          int64  `json:"id"`
-	PhoneNumber string `json:"phone_number"`
-	Email       string `json:"email"`
-	Username    string `json:"username"`
+	ID          int32       `json:"id"`
+	Email       string      `json:"email"`
+	Username    string      `json:"username"`
+	PhoneNumber pgtype.Text `json:"phone_number"`
 	// hashed password
 	Password string `json:"password"`
 	// role-based access: admin, seller, or buyer
-	Role      string    `json:"role"`
-	CreatedAt time.Time `json:"created_at"`
+	Role       string             `json:"role"`
+	IsVerified pgtype.Bool        `json:"is_verified"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 }

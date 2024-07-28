@@ -1,11 +1,12 @@
-CREATE TABLE "users" (
-                         "id" bigserial PRIMARY KEY,
-                         "phone_number" varchar(15) NOT NULL,
-                         "email" varchar(255) NOT NULL UNIQUE,
-                         "username" varchar(50) NOT NULL UNIQUE,
-                         "password" varchar(255) NOT NULL,
-                         "role" varchar(20) NOT NULL,
-                         "created_at" timestamptz NOT NULL DEFAULT (now())
+CREATE TABLE users (
+                       id SERIAL PRIMARY KEY,
+                       email VARCHAR(255) UNIQUE NOT NULL,
+                       username VARCHAR(255) NOT NULL,
+                       phone_number VARCHAR(20),
+                       password VARCHAR(255) NOT NULL,
+                       role VARCHAR(50) NOT NULL,
+                       is_verified BOOLEAN DEFAULT FALSE,
+                       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Ensure the email and username are unique

@@ -7,6 +7,8 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -15,18 +17,20 @@ INSERT INTO users (
     username,
     phone_number,
     password,
-    role
+    role,
+    is_verified
 ) VALUES (
-             $1, $2, $3, $4, $5
-         ) RETURNING id, phone_number, email, username, password, role, created_at
+             $1, $2, $3, $4, $5, $6
+         ) RETURNING id, email, username, phone_number, password, role, is_verified, created_at
 `
 
 type CreateUserParams struct {
-	Email       string `json:"email"`
-	Username    string `json:"username"`
-	PhoneNumber string `json:"phone_number"`
-	Password    string `json:"password"`
-	Role        string `json:"role"`
+	Email       string      `json:"email"`
+	Username    string      `json:"username"`
+	PhoneNumber pgtype.Text `json:"phone_number"`
+	Password    string      `json:"password"`
+	Role        string      `json:"role"`
+	IsVerified  pgtype.Bool `json:"is_verified"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -36,15 +40,17 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.PhoneNumber,
 		arg.Password,
 		arg.Role,
+		arg.IsVerified,
 	)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.PhoneNumber,
 		&i.Email,
 		&i.Username,
+		&i.PhoneNumber,
 		&i.Password,
 		&i.Role,
+		&i.IsVerified,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -54,33 +60,54 @@ const deleteUser = `-- name: DeleteUser :exec
 DELETE FROM users WHERE id = $1
 `
 
-func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
+func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 	_, err := q.db.Exec(ctx, deleteUser, id)
 	return err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, phone_number, email, username, password, role, created_at FROM users
+SELECT id, email, username, phone_number, password, role, is_verified, created_at FROM users
 WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
+func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 	row := q.db.QueryRow(ctx, getUser, id)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.PhoneNumber,
 		&i.Email,
 		&i.Username,
+		&i.PhoneNumber,
 		&i.Password,
 		&i.Role,
+		&i.IsVerified,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, email, username, phone_number, password, role, is_verified, created_at FROM users WHERE email = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Username,
+		&i.PhoneNumber,
+		&i.Password,
+		&i.Role,
+		&i.IsVerified,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, phone_number, email, username, password, role, created_at FROM users
+SELECT id, email, username, phone_number, password, role, is_verified, created_at FROM users
 ORDER BY id
     LIMIT $1
 OFFSET $2
@@ -102,11 +129,12 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 		var i User
 		if err := rows.Scan(
 			&i.ID,
-			&i.PhoneNumber,
 			&i.Email,
 			&i.Username,
+			&i.PhoneNumber,
 			&i.Password,
 			&i.Role,
+			&i.IsVerified,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -123,11 +151,11 @@ const updateUser = `-- name: UpdateUser :one
 UPDATE users
 SET username = $2
 WHERE id = $1
-    RETURNING id, phone_number, email, username, password, role, created_at
+    RETURNING id, email, username, phone_number, password, role, is_verified, created_at
 `
 
 type UpdateUserParams struct {
-	ID       int64  `json:"id"`
+	ID       int32  `json:"id"`
 	Username string `json:"username"`
 }
 
@@ -136,12 +164,22 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.PhoneNumber,
 		&i.Email,
 		&i.Username,
+		&i.PhoneNumber,
 		&i.Password,
 		&i.Role,
+		&i.IsVerified,
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const verifyUser = `-- name: VerifyUser :exec
+UPDATE users SET is_verified = true WHERE email = $1
+`
+
+func (q *Queries) VerifyUser(ctx context.Context, email string) error {
+	_, err := q.db.Exec(ctx, verifyUser, email)
+	return err
 }
