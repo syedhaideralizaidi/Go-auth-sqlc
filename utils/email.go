@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-const sendgridAPIKey = os.Getenv("SENDGRID_API_KEY")
+var sendgridAPIKey = os.Getenv("SENDGRID_API_KEY")
 
 func SendVerificationEmail(email, token string) error {
 	//from := mail.NewEmail("AssetCurve", "8info@assetcurve.io")
