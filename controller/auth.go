@@ -85,11 +85,6 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	//if user.Password != req.Password {
-	//	c.JSON(http.StatusUnauthorized, gin.H{"error": "Incorrect email or password"})
-	//	return
-	//}
-
 	if !user.IsVerified.Bool {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Email not verified"})
 		return

@@ -21,7 +21,7 @@ INSERT INTO users (
     is_verified
 ) VALUES (
              $1, $2, $3, $4, $5, $6
-         ) RETURNING id, email, username, phone_number, password, role, is_verified, created_at
+         ) RETURNING id, email, username, phone_number, password, role, is_verified, created_at, reset_token, reset_token_expiry
 `
 
 type CreateUserParams struct {
@@ -52,6 +52,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Role,
 		&i.IsVerified,
 		&i.CreatedAt,
+		&i.ResetToken,
+		&i.ResetTokenExpiry,
 	)
 	return i, err
 }
@@ -66,7 +68,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, email, username, phone_number, password, role, is_verified, created_at FROM users
+SELECT id, email, username, phone_number, password, role, is_verified, created_at, reset_token, reset_token_expiry FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -82,12 +84,14 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 		&i.Role,
 		&i.IsVerified,
 		&i.CreatedAt,
+		&i.ResetToken,
+		&i.ResetTokenExpiry,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, username, phone_number, password, role, is_verified, created_at FROM users WHERE email = $1 LIMIT 1
+SELECT id, email, username, phone_number, password, role, is_verified, created_at, reset_token, reset_token_expiry FROM users WHERE email = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -102,12 +106,47 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Role,
 		&i.IsVerified,
 		&i.CreatedAt,
+		&i.ResetToken,
+		&i.ResetTokenExpiry,
+	)
+	return i, err
+}
+
+const getUserByResetToken = `-- name: GetUserByResetToken :one
+SELECT id, email, username, phone_number, password, role, is_verified, created_at
+FROM users
+WHERE reset_token = $1 AND reset_token_expiry > NOW()
+`
+
+type GetUserByResetTokenRow struct {
+	ID          int32              `json:"id"`
+	Email       string             `json:"email"`
+	Username    string             `json:"username"`
+	PhoneNumber pgtype.Text        `json:"phone_number"`
+	Password    string             `json:"password"`
+	Role        string             `json:"role"`
+	IsVerified  pgtype.Bool        `json:"is_verified"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) GetUserByResetToken(ctx context.Context, resetToken pgtype.Text) (GetUserByResetTokenRow, error) {
+	row := q.db.QueryRow(ctx, getUserByResetToken, resetToken)
+	var i GetUserByResetTokenRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Username,
+		&i.PhoneNumber,
+		&i.Password,
+		&i.Role,
+		&i.IsVerified,
+		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, email, username, phone_number, password, role, is_verified, created_at FROM users
+SELECT id, email, username, phone_number, password, role, is_verified, created_at, reset_token, reset_token_expiry FROM users
 ORDER BY id
     LIMIT $1
 OFFSET $2
@@ -136,6 +175,8 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 			&i.Role,
 			&i.IsVerified,
 			&i.CreatedAt,
+			&i.ResetToken,
+			&i.ResetTokenExpiry,
 		); err != nil {
 			return nil, err
 		}
@@ -147,11 +188,44 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 	return items, nil
 }
 
+const resetPassword = `-- name: ResetPassword :exec
+UPDATE users
+SET password = $1, reset_token = NULL, reset_token_expiry = NULL
+WHERE reset_token = $2 AND reset_token_expiry > NOW()
+`
+
+type ResetPasswordParams struct {
+	Password   string      `json:"password"`
+	ResetToken pgtype.Text `json:"reset_token"`
+}
+
+func (q *Queries) ResetPassword(ctx context.Context, arg ResetPasswordParams) error {
+	_, err := q.db.Exec(ctx, resetPassword, arg.Password, arg.ResetToken)
+	return err
+}
+
+const updateResetToken = `-- name: UpdateResetToken :exec
+UPDATE users
+SET reset_token = $1, reset_token_expiry = $2
+WHERE email = $3
+`
+
+type UpdateResetTokenParams struct {
+	ResetToken       pgtype.Text        `json:"reset_token"`
+	ResetTokenExpiry pgtype.Timestamptz `json:"reset_token_expiry"`
+	Email            string             `json:"email"`
+}
+
+func (q *Queries) UpdateResetToken(ctx context.Context, arg UpdateResetTokenParams) error {
+	_, err := q.db.Exec(ctx, updateResetToken, arg.ResetToken, arg.ResetTokenExpiry, arg.Email)
+	return err
+}
+
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
 SET username = $2
 WHERE id = $1
-    RETURNING id, email, username, phone_number, password, role, is_verified, created_at
+    RETURNING id, email, username, phone_number, password, role, is_verified, created_at, reset_token, reset_token_expiry
 `
 
 type UpdateUserParams struct {
@@ -171,6 +245,8 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Role,
 		&i.IsVerified,
 		&i.CreatedAt,
+		&i.ResetToken,
+		&i.ResetTokenExpiry,
 	)
 	return i, err
 }

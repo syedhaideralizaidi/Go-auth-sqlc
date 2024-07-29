@@ -34,3 +34,18 @@ WHERE id = $1
 
 -- name: DeleteUser :exec
 DELETE FROM users WHERE id = $1;
+
+-- name: UpdateResetToken :exec
+UPDATE users
+SET reset_token = $1, reset_token_expiry = $2
+WHERE email = $3;
+
+-- name: GetUserByResetToken :one
+SELECT id, email, username, phone_number, password, role, is_verified, created_at
+FROM users
+WHERE reset_token = $1 AND reset_token_expiry > NOW();
+
+-- name: ResetPassword :exec
+UPDATE users
+SET password = $1, reset_token = NULL, reset_token_expiry = NULL
+WHERE reset_token = $2 AND reset_token_expiry > NOW();

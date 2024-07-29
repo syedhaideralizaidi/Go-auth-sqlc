@@ -16,7 +16,9 @@ type User struct {
 	// hashed password
 	Password string `json:"password"`
 	// role-based access: admin, seller, or buyer
-	Role       string             `json:"role"`
-	IsVerified pgtype.Bool        `json:"is_verified"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	Role             string             `json:"role"`
+	IsVerified       pgtype.Bool        `json:"is_verified"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	ResetToken       pgtype.Text        `json:"reset_token"`
+	ResetTokenExpiry pgtype.Timestamptz `json:"reset_token_expiry"`
 }

@@ -6,6 +6,8 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
@@ -13,7 +15,10 @@ type Querier interface {
 	DeleteUser(ctx context.Context, id int32) error
 	GetUser(ctx context.Context, id int32) (User, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
+	GetUserByResetToken(ctx context.Context, resetToken pgtype.Text) (GetUserByResetTokenRow, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
+	ResetPassword(ctx context.Context, arg ResetPasswordParams) error
+	UpdateResetToken(ctx context.Context, arg UpdateResetTokenParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	VerifyUser(ctx context.Context, email string) error
 }

@@ -26,25 +26,7 @@ CREATE INDEX ON "users" ("role");
 COMMENT ON COLUMN "users"."password" IS 'hashed password';
 COMMENT ON COLUMN "users"."role" IS 'role-based access: admin, seller, or buyer';
 
--- -- Example trigger function to hash password before insert or update
--- CREATE OR REPLACE FUNCTION hash_password_function()
--- RETURNS TRIGGER AS $$
--- BEGIN
---   IF TG_OP = 'INSERT' OR (TG_OP = 'UPDATE' AND NEW.password IS DISTINCT FROM OLD.password) THEN
---     NEW.password = crypt(NEW.password, gen_salt('bf'));
--- END IF;
--- RETURN NEW;
--- END;
--- $$ LANGUAGE plpgsql;
---
--- -- Trigger to call the hash_password_function before inserting a new user
--- CREATE TRIGGER hash_password_before_insert
---     BEFORE INSERT ON "users"
---     FOR EACH ROW
---     EXECUTE FUNCTION hash_password_function();
---
--- -- Trigger to call the hash_password_function before updating a user
--- CREATE TRIGGER hash_password_before_update
---     BEFORE UPDATE ON "users"
---     FOR EACH ROW
---     EXECUTE FUNCTION hash_password_function();
+-- source: user.sql
+
+ALTER TABLE users ADD COLUMN reset_token TEXT;
+ALTER TABLE users ADD COLUMN reset_token_expiry TIMESTAMPTZ;

@@ -9,6 +9,7 @@ import (
 )
 
 func main() {
+	logger := middleware.SetupLogger()
 	database.ConnectDB()
 	defer database.Conn.Close(context.Background())
 
@@ -16,10 +17,12 @@ func main() {
 	r.POST("/register", controller.Register)
 	r.POST("/login", controller.Login)
 	r.GET("/verify-email", controller.VerifyEmail)
+	r.POST("/request-password-reset", controller.RequestPasswordReset)
+	r.POST("/reset-password", controller.ResetPassword)
 
 	// Protected routes
 	protected := r.Group("/api")
-	protected.Use(middleware.AuthMiddleware())
+	protected.Use(middleware.AuthMiddleware(logger))
 	{
 		protected.POST("/users", controller.CreateUser)
 		protected.GET("/users/:id", controller.GetUser)
